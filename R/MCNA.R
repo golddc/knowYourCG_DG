@@ -37,7 +37,8 @@ returnDiffCpGs <- function(
 
 
 prepareSampleSet <- function(
-        betas,k=50,impute=TRUE,num_row=75000,diffThreshold=0.5,sample_size=0.33) {
+        betas,k=50,impute=TRUE,num_row=75000,diffThreshold=0.5,
+        sample_size=0.33,query_size=10000) {
 
     if (is(betas, "numeric")) {
         betas <- cbind(sample = betas)
@@ -51,6 +52,7 @@ prepareSampleSet <- function(
     sample_size <- round(sample_size * num)
     betas_sample <- betas[sample(rownames(betas), size=sample_size), ]
     query <- betas[!rownames(betas) %in% rownames(betas_sample),]
+    query <- ifelse(length(query) <= query_size,query,sample(query,query_size))
     betas_sample <- rbind(
         betas_sample,
         returnDiffCpGs(
@@ -200,13 +202,14 @@ getInterModCors <- function(mod_list,betas) {
 findCpGModules <- function (
         betas,impute=TRUE,diffThreshold=.5,k=50,metric="correlation",
         edgeThreshold=.1,nodeThreshold=0,moduleSize = 5,
-        num_row = 75000, sample_size=0.33) {
+        num_row = 75000, sample_size=0.33, query_size=10000) {
 
     beta_sample <- prepareSampleSet(
         betas=betas,
         impute=impute,
         num_row=num_row,
         sample_size=sample_size,
+        query_size=query_size,
         diffThreshold=diffThreshold
     )
     nnr <- rnndescent::nnd_knn(beta_sample, k = k, metric=metric)
