@@ -12,7 +12,9 @@ findCpGModules(
   metric = "correlation",
   edgeThreshold = 0.1,
   nodeThreshold = 0,
-  moduleSize = 5
+  moduleSize = 5,
+  num_row = 75000,
+  sample_size = 0.33
 )
 }
 \arguments{
@@ -35,6 +37,10 @@ detection (1 - correlation)}
 \item{nodeThreshold}{minimum node degree for removal from graph}
 
 \item{moduleSize}{minimum number of CpGs for module consideration}
+
+\item{num_row}{number of variable rows to select for reference graph pool}
+
+\item{sample_size}{number of CpGs to sample for reference graph}
 }
 \value{
 A list of CpG modules
