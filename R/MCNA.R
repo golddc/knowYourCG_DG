@@ -80,6 +80,96 @@ detectCommunity <- function(el,edgeThreshold=.1,nodeThreshold=0) {
 }
 
 
+getJaccard <- function(a,b) {
+    intersection = length(intersect(a, b))
+    union = length(a) + length(b) - intersection
+    return (intersection/union)
+}
+
+createMatrix <- function(mod_list,compute=FALSE) {
+    n = length(mod_list)
+    nms = names(mod_list)
+    mtx <- matrix(0,nrow = n,ncol = n,dimnames = list(nms,nms))
+    if (compute) {
+        for (nm in nms) {
+            for (nm2 in nms) {
+                v1 = mod_list[[nm]]
+                v2 = mod_list[[nm2]]
+                s = getJaccard(v1,v2)
+                mtx[nm,nm2] <- s
+                print(paste("Done with ",nm,"---",nm2))
+            }
+        }
+    }
+    mtx
+}
+
+extractConsensus <- function(mod_mtx,mod_list,jacc_thresh=0.4) {
+    merge <- apply(mod_mtx,1,function(x) {
+        which(x >= jacc_thresh)
+    })
+    merge <- unique(merge)
+    mods <- lapply(merge,function(x) {
+        module <- unique(unlist(mod_list[x]))
+    })
+    names(mods) <- as.character(seq(mods))
+    mods
+}
+
+extractConsensusModules <- function(mod_mtx,mod_list,jacc_thresh=0.4) {
+    mtx <- mod_mtx
+    ml <- mod_list
+    sim_mods <- any(apply(mtx,1,function(x) x >= jacc_thresh & x < 1))
+    while (sim_mods > 0) {
+        ml <- extractConsensus(
+            mod_mtx=mtx,
+            mod_list=ml,
+            jacc_thresh = jacc_thresh
+        )
+        mtx <- createMatrix(ml,compute = TRUE)
+        sim_mods <- any(apply(mtx,1,function(x) x >= jacc_thresh & x < 1))
+    }
+    ml
+}
+
+
+intraModCor <- function(x,betas) {
+    b <- betas[x,]
+    cors <- do.call(c,lapply(1:nrow(b),function(xx) {
+        v2 <- b[xx,]
+        r <- apply(b[-xx,],1,cor,v2,use="complete.obs")
+    }))
+    mean(unique(cors))
+}
+
+interModCor <- function(mod1,mod2,betas) {
+    cgs <- unlist(c(mod1,mod2))
+    b <- betas[cgs,]
+    mtx <- matrix(0,nrow = length(mod1),ncol = length(mod2),
+                  dimnames = list(mod1,mod2))
+    for (nm in rownames(mtx)) {
+        for (nm2 in colnames(mtx)) {
+            r <- cor(b[nm,],b[nm2,],use = "complete.obs")
+            mtx[nm,nm2] <- r
+        }
+    }
+    mean(as.vector(mtx))
+}
+
+getInterModCors <- function(mod_list,betas) {
+    len <- length(mod_list)
+    cors <- vector(mode = "double",length = len * (len - 1))
+    for (i in seq(mod_list)) {
+        for (j in seq(mod_list)) {
+            if (i == j) next
+            ind <- 1
+            r <- interModCor(mod_list[[i]],mod_list[[j]],betas)
+            cors[ind] <- r
+            ind <- ind + 1
+        }
+    }
+}
+
 #' findCpGModules identifies modules of co-methylated CpGs
 #'
 #' @param betas matrix of beta values where probes are on the rows and
