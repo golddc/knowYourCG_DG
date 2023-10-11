@@ -50,13 +50,17 @@ prepareSampleSet <- function(
     if (is.null(preSorted)) {
         var_rows <- order(-apply(betas,1,sd))[seq(num)]
     } else {
-        var_rows <- preSorted[seq(num)]
+        #var_rows <- preSorted[seq(num)] #sample this, dont take in order
+        var_rows <- sample(preSorted,num)
     }
     betas <- betas[var_rows,]
     sample_size <- round(sample_size * num)
     betas_sample <- betas[sample(rownames(betas), size=sample_size), ]
     query <- betas[!rownames(betas) %in% rownames(betas_sample),]
-    query <- ifelse(length(query) <= query_size,query,sample(query,query_size))
+    nQ <- nrow(query)
+    if (nQ > query_size) {
+        query <- query[sample(nQ,query_size),]
+    }
     betas_sample <- rbind(
         betas_sample,
         returnDiffCpGs(
