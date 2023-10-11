@@ -38,7 +38,7 @@ returnDiffCpGs <- function(
 
 prepareSampleSet <- function(
         betas,k=50,impute=TRUE,num_row=75000,diffThreshold=0.5,
-        sample_size=0.33,query_size=10000) {
+        sample_size=0.33,query_size=10000,preSorted=NULL) {
 
     if (is(betas, "numeric")) {
         betas <- cbind(sample = betas)
@@ -47,7 +47,11 @@ prepareSampleSet <- function(
         betas <- cleanMatrix(betas)
     }
     num <- ifelse(nrow(betas) < num_row,nrow(betas),num_row)
-    var_rows <- order(-apply(betas,1,sd))[seq(num)]
+    if (is.null(preSorted)) {
+        var_rows <- order(-apply(betas,1,sd))[seq(num)]
+    } else {
+        var_rows <- preSorted[seq(num)]
+    }
     betas <- betas[var_rows,]
     sample_size <- round(sample_size * num)
     betas_sample <- betas[sample(rownames(betas), size=sample_size), ]
@@ -188,6 +192,8 @@ getInterModCors <- function(mod_list,betas) {
 #' @param moduleSize minimum number of CpGs for module consideration
 #' @param num_row number of variable rows to select for reference graph pool
 #' @param sample_size number of CpGs to sample for reference graph
+#' @param query_size number of CpGs to query reference graph
+#' @param preSorted optional vector of sorted indices
 #' @return A list of CpG modules
 #' @importFrom igraph graph_from_data_frame delete.edges delete.vertices
 #' @importFrom igraph cluster_louvain degree communities sizes
@@ -202,12 +208,14 @@ getInterModCors <- function(mod_list,betas) {
 findCpGModules <- function (
         betas,impute=TRUE,diffThreshold=.5,k=50,metric="correlation",
         edgeThreshold=.1,nodeThreshold=0,moduleSize = 5,
-        num_row = 75000, sample_size=0.33, query_size=10000) {
+        num_row = 75000, sample_size=0.33, query_size=10000,
+        preSorted=NULL) {
 
     beta_sample <- prepareSampleSet(
         betas=betas,
         impute=impute,
         num_row=num_row,
+        preSorted=preSorted,
         sample_size=sample_size,
         query_size=query_size,
         diffThreshold=diffThreshold
